@@ -890,9 +890,17 @@ class FlutterEarthState extends State<FlutterEarth>
           onScaleUpdate: _handleScaleUpdate,
           onScaleEnd: _handleScaleEnd,
           onDoubleTap: _handleDoubleTap,
-          child: CustomPaint(
-            painter: SpherePainter(this, widget.coverage, widget.layers),
-            size: Size(constraints.maxWidth, constraints.maxHeight),
+          child: Stack(
+            children: [
+              CustomPaint(
+                painter: SpherePainterCoverage(this, widget.coverage),
+                size: Size(constraints.maxWidth, constraints.maxHeight),
+              ),
+              CustomPaint(
+                painter: SpherePainterLayers(this, widget.layers),
+                size: Size(constraints.maxWidth, constraints.maxHeight),
+              ),
+            ],
           ),
         );
       },
@@ -900,23 +908,40 @@ class FlutterEarthState extends State<FlutterEarth>
   }
 }
 
-class SpherePainter extends CustomPainter {
-  const SpherePainter(this.state, this.coverage, this.layers);
+class SpherePainterCoverage extends CustomPainter {
+  const SpherePainterCoverage(this.state, this.coverage);
 
   final FlutterEarthState state;
   final String coverage;
-  final List<String>? layers;
 
   @override
   void paint(Canvas canvas, Size size) {
     canvas.translate(size.width / 2, size.height / 2);
     state.drawTiles(canvas, size, coverage);
+  }
+
+  // We should repaint whenever the board changes, such as board.selected.
+  @override
+  bool shouldRepaint(SpherePainterCoverage oldDelegate) {
+    return true;
+  }
+}
+
+class SpherePainterLayers extends CustomPainter {
+  const SpherePainterLayers(this.state, this.layers);
+
+  final FlutterEarthState state;
+  final List<String>? layers;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.translate(size.width / 2, size.height / 2);
     layers?.map((e) => state.drawTiles(canvas, size, e));
   }
 
   // We should repaint whenever the board changes, such as board.selected.
   @override
-  bool shouldRepaint(SpherePainter oldDelegate) {
+  bool shouldRepaint(SpherePainterLayers oldDelegate) {
     return true;
   }
 }
