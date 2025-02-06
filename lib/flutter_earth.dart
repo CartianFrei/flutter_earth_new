@@ -8,7 +8,6 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart' hide Image;
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:image/image.dart' as img;
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 
 /// load an image from asset
@@ -423,16 +422,15 @@ class FlutterEarthState extends State<FlutterEarth>
     return list;
   }
 
-  void initMeshTexture(Mesh mesh, String url, String? layerUrl) async {
+  void initMeshTexture(Mesh mesh, String url, String? layerUrl) {
     if (layerUrl != null) {
       final layerTile = getTile(
           mesh.x ~/ tileWidth, mesh.y ~/ tileHeight, zoomLevel, layerUrl);
-      final tile =
-          getTile(mesh.x ~/ tileWidth, mesh.y ~/ tileHeight, zoomLevel, url);
-
       if (layerTile?.status == TileStatus.ready) {
         //Is zoomed tile?
-        if (layerTile?.z != zoomLevel && layerTile != null) {
+        if (layerTile?.z != zoomLevel &&
+            layerTile != null &&
+            layerTile.image != null) {
           final Float32List texcoords = mesh.texcoords;
           final int texcoordCount = texcoords.length;
           final double scale = math.pow(2, layerTile.z - zoomLevel).toDouble();
@@ -442,7 +440,25 @@ class FlutterEarthState extends State<FlutterEarth>
             texcoords[i + 1] =
                 (mesh.y + texcoords[i + 1]) * scale - layerTile.y * tileHeight;
           }
-          mesh.texture = await imageBuilder(layerTile.image!, tile!.image!);
+          mesh.texture = layerTile.image;
+        } else {
+          final tile = getTile(
+              mesh.x ~/ tileWidth, mesh.y ~/ tileHeight, zoomLevel, url);
+          if (tile?.status == TileStatus.ready) {
+            //Is zoomed tile?
+            if (tile?.z != zoomLevel && tile != null) {
+              final Float32List texcoords = mesh.texcoords;
+              final int texcoordCount = texcoords.length;
+              final double scale = math.pow(2, tile.z - zoomLevel).toDouble();
+              for (int i = 0; i < texcoordCount; i += 2) {
+                texcoords[i] =
+                    (mesh.x + texcoords[i]) * scale - tile.x * tileWidth;
+                texcoords[i + 1] =
+                    (mesh.y + texcoords[i + 1]) * scale - tile.y * tileHeight;
+              }
+            }
+            mesh.texture = tile?.image;
+          }
         }
       }
     } else {
@@ -974,24 +990,4 @@ class FlutterEarthController {
         riseSpeed: riseSpeed,
         fallSpeed: fallSpeed);
   }
-}
-
-Future<Image> imageBuilder(Image imageA, Image imageB) async {
-  final imageBytesA = await imageA.toByteData();
-  final imageBytesB = await imageB.toByteData();
-  Uint8List valuesA = imageBytesA!.buffer.asUint8List();
-  img.Image? photoA;
-  Uint8List valuesB = imageBytesB!.buffer.asUint8List();
-  img.Image? photoB;
-  photoA = img.decodeImage(valuesA)!;
-  photoB = img.decodeImage(valuesB)!;
-
-  for (int y = 0; y < photoA.height; ++y) {
-    for (int x = 0; x < photoA.width; ++x) {
-      if (photoA.getPixel(x, y).a != 255) {
-        photoA.data!.setPixel(x, y, photoB.getPixel(x, y));
-      }
-    }
-  }
-  return photoA as Image;
 }
