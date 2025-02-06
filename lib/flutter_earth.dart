@@ -432,7 +432,7 @@ class FlutterEarthState extends State<FlutterEarth>
 
       if (layerTile?.status == TileStatus.ready) {
         //Is zoomed tile?
-        if (layerTile?.z != zoomLevel && layerTile != null && tile != null) {
+        if (layerTile?.z != zoomLevel && layerTile != null) {
           final Float32List texcoords = mesh.texcoords;
           final int texcoordCount = texcoords.length;
           final double scale = math.pow(2, layerTile.z - zoomLevel).toDouble();
@@ -442,8 +442,7 @@ class FlutterEarthState extends State<FlutterEarth>
             texcoords[i + 1] =
                 (mesh.y + texcoords[i + 1]) * scale - layerTile.y * tileHeight;
           }
-          await imageBuilder(layerTile.image!, tile.image!);
-          mesh.texture = layerTile.image;
+          mesh.texture = await imageBuilder(layerTile.image!, tile!.image!);
         }
       }
     } else {
@@ -977,7 +976,7 @@ class FlutterEarthController {
   }
 }
 
-Future<bool> imageBuilder(Image imageA, Image imageB) async {
+Future<Image> imageBuilder(Image imageA, Image imageB) async {
   final imageBytesA = await imageA.toByteData();
   final imageBytesB = await imageB.toByteData();
   Uint8List valuesA = imageBytesA!.buffer.asUint8List();
@@ -994,5 +993,5 @@ Future<bool> imageBuilder(Image imageA, Image imageB) async {
       }
     }
   }
-  return false;
+  return photoA as Image;
 }
