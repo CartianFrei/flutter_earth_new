@@ -618,8 +618,10 @@ class FlutterEarthState extends State<FlutterEarth>
       if (layers != null && layers.isNotEmpty) {
         layers.map((e) {
           initMeshTexture(mesh, e);
-          meshList
-              .map((item) => item.positions == mesh.positions ? mesh : item);
+          meshList.map((item) =>
+              item.x == mesh.x && item.y == mesh.y && item.z == mesh.z
+                  ? mesh
+                  : item);
         });
       }
     }
