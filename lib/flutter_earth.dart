@@ -614,8 +614,11 @@ class FlutterEarthState extends State<FlutterEarth>
         radius,
       );
       initMeshTexture(mesh, coverage);
-      layers?.map((e) => initMeshTexture(mesh, e));
       meshList.add(mesh);
+      layers?.map((e) {
+        initMeshTexture(mesh, e);
+        meshList.add(mesh);
+      });
     }
     if (widget.showPole ?? false) {
       meshList.add(buildPoleMesh(math.pi / 2, radians(84), 5, northPoleImage));
