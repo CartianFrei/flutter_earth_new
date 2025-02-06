@@ -8,8 +8,28 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart' hide Image;
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:image/image.dart' as img;
+import 'package:flutter_earth/src/core/enums/tile_status_enum.dart';
+import 'package:flutter_earth/src/core/math/lat_lon_converter.dart';
+import 'package:flutter_earth/src/core/math/math_worths_sh.dart';
+import 'package:flutter_earth/src/core/resources/euler_angles.dart';
+import 'package:flutter_earth/src/core/resources/lat_lon.dart';
+import 'package:flutter_earth/src/core/resources/mesh.dart';
+import 'package:flutter_earth/src/core/resources/polygon.dart';
+import 'package:flutter_earth/src/gestures/flutter_earth_controller.dart';
+import 'package:flutter_earth/src/layer/sphere_painter.dart';
+import 'package:flutter_earth/src/layer/tile.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
+
+export 'package:flutter_earth/src/core/enums/tile_status_enum.dart';
+export 'package:flutter_earth/src/core/math/lat_lon_converter.dart';
+export 'package:flutter_earth/src/core/math/math_worths_sh.dart';
+export 'package:flutter_earth/src/core/resources/euler_angles.dart';
+export 'package:flutter_earth/src/core/resources/lat_lon.dart';
+export 'package:flutter_earth/src/core/resources/mesh.dart';
+export 'package:flutter_earth/src/core/resources/polygon.dart';
+export 'package:flutter_earth/src/gestures/flutter_earth_controller.dart';
+export 'package:flutter_earth/src/layer/sphere_painter.dart';
+export 'package:flutter_earth/src/layer/tile.dart';
 
 /// load an image from asset
 Future<Image> loadImageFromAsset(String fileName) {
@@ -24,230 +44,6 @@ Future<Image> loadImageFromAsset(String fileName) {
     c.completeError(error);
   });
   return c.future;
-}
-
-/// Mercator projection
-const double maxLatitude = 85.05112877980659 * math.pi / 180;
-
-Offset latLonToPoint(double latitude, double longitude) {
-  final x = 0.5 + longitude / (2.0 * math.pi);
-  double y;
-  if (latitude > maxLatitude || latitude < -maxLatitude) {
-    y = 0.5 - latitude / math.pi;
-  } else {
-    final sinlat = math.sin(latitude);
-    y = 0.5 - math.log((1 + sinlat) / (1 - sinlat)) / (4.0 * math.pi);
-  }
-  return Offset(x, y);
-}
-
-LatLon pointToLatLon(double x, double y) {
-  final longitude = (x - 0.5) * (2.0 * math.pi);
-  final latitude =
-      2.0 * math.atan(math.exp(math.pi - 2.0 * math.pi * y)) - math.pi / 2.0;
-  return LatLon(latitude, longitude);
-}
-
-/// Cartesian coordinate conversions
-Vector3 latLonToVector3(LatLon latLon) {
-  final cosLat = math.cos(latLon.latitude);
-  final x = cosLat * math.cos(latLon.longitude);
-  final y = cosLat * math.sin(latLon.longitude);
-  final z = math.sin(latLon.latitude);
-  return Vector3(x, y, z);
-}
-
-LatLon vector3ToLatLon(Vector3 v) {
-  final lat = math.asin(v.z);
-  var lon = math.atan2(v.y, v.x);
-  return LatLon(lat, lon);
-}
-
-/// Quaternion conversions
-LatLon quaternionToLatLon(Quaternion q) {
-  final euler = quaternionToEulerAngles(q);
-  return eulerAnglesToLatLon(euler);
-}
-
-Quaternion latLonToQuaternion(LatLon latLon) {
-  final euler = latLonToEulerAngles(latLon);
-  return eulerAnglesToQuaternion(euler);
-}
-
-/// Fixed Quaternion.setFromTwoVectors from 'vector_math_64/quaternion.dart'.
-Quaternion quaternionFromTwoVectors(Vector3 a, Vector3 b) {
-  final Vector3 v1 = a.normalized();
-  final Vector3 v2 = b.normalized();
-
-  final double c = math.max(-1, math.min(1, v1.dot(v2)));
-  double angle = math.acos(c);
-  Vector3 axis = v1.cross(v2);
-  if (axis.length == 0) axis = Vector3(1.0, 0.0, 0.0);
-
-  return Quaternion.axisAngle(axis, angle);
-}
-
-/// Fixed Quaternion.axis from 'vector_math_64/quaternion.dart'.
-Vector3 quaternionAxis(Quaternion q) {
-  final qStorage = q.storage;
-  final double den = 1.0 - (qStorage[3] * qStorage[3]);
-  if (den == 0) return Vector3(1.0, 0.0, 0.0);
-
-  final double scale = 1.0 / math.sqrt(den);
-  return Vector3(qStorage[0] * scale, qStorage[1] * scale, qStorage[2] * scale);
-}
-
-/// Euler Angles
-EulerAngles quaternionToEulerAngles(Quaternion q) {
-  final qStorage = q.storage;
-  final x = qStorage[0];
-  final y = qStorage[1];
-  final z = qStorage[2];
-  final w = qStorage[3];
-
-  final roll = math.atan2(2 * (w * z + x * y), 1 - 2 * (z * z + x * x));
-  final pitch = math.asin(math.max(-1, math.min(1, 2 * (w * x - y * z))));
-  final yaw = math.atan2(2 * (w * y + z * x), 1 - 2 * (x * x + y * y));
-
-  return EulerAngles(yaw, pitch, roll);
-}
-
-Quaternion eulerAnglesToQuaternion(EulerAngles euler) {
-  return Quaternion.euler(euler.yaw, euler.pitch, euler.roll);
-}
-
-LatLon eulerAnglesToLatLon(EulerAngles euler) {
-  return LatLon(-euler.pitch, -euler.yaw);
-}
-
-EulerAngles latLonToEulerAngles(LatLon latLon) {
-  return EulerAngles(-latLon.longitude, -latLon.latitude, 0);
-}
-
-class EulerAngles {
-  double yaw;
-  double pitch;
-  double roll;
-
-  EulerAngles(this.yaw, this.pitch, this.roll);
-
-  EulerAngles clone() => EulerAngles(yaw, pitch, roll);
-
-  void scale(double arg) {
-    yaw *= arg;
-    pitch *= arg;
-    roll *= arg;
-  }
-
-  EulerAngles inRadians() =>
-      EulerAngles(radians(yaw), radians(pitch), radians(roll));
-
-  EulerAngles inDegrees() =>
-      EulerAngles(degrees(yaw), degrees(pitch), degrees(roll));
-
-  @override
-  String toString() =>
-      'pitch:${pitch.toStringAsFixed(4)}, yaw:${yaw.toStringAsFixed(4)}, roll:${roll.toStringAsFixed(4)}';
-}
-
-class LatLon {
-  LatLon(this.latitude, this.longitude);
-
-  double latitude;
-  double longitude;
-
-  LatLon inRadians() => LatLon(radians(latitude), radians(longitude));
-
-  LatLon inDegrees() => LatLon(degrees(latitude), degrees(longitude));
-
-  @override
-  String toString() =>
-      'LatLon(${degrees(latitude).toStringAsFixed(2)}, ${degrees(longitude).toStringAsFixed(2)})';
-}
-
-class Polygon {
-  Polygon(this.vertex0, this.vertex1, this.vertex2, [this.sumOfZ = 0]);
-
-  int vertex0;
-  int vertex1;
-  int vertex2;
-  double sumOfZ;
-}
-
-class Mesh {
-  Mesh(int vertexCount, int faceCount) {
-    positions = Float32List(vertexCount * 2);
-    positionsZ = Float32List(vertexCount);
-    texcoords = Float32List(vertexCount * 2);
-    colors = Int32List(vertexCount);
-    indices = Uint16List(faceCount * 3);
-    this.vertexCount = 0;
-    indexCount = 0;
-  }
-
-  late Float32List positions;
-  late Float32List positionsZ;
-  late Float32List texcoords;
-  late Int32List colors;
-  late Uint16List indices;
-  late int vertexCount;
-  late int indexCount;
-  Image? texture;
-  double x = 0;
-  double y = 0;
-  double z = 0;
-}
-
-enum TileStatus {
-  clear,
-  pending,
-  fetching,
-  ready,
-  error,
-}
-
-class Tile {
-  Tile(this.x, this.y, this.z,
-      {this.image, this.future, required this.imageProvider});
-
-  int x;
-  int y;
-
-  /// zoom level
-  int z;
-  TileStatus status = TileStatus.clear;
-  Image? image;
-  Future<Image>? future;
-  ImageProvider imageProvider;
-  ImageStream? _imageStream;
-  ImageStreamListener? _listener;
-
-  void _tileOnLoad(
-      ImageInfo imageInfo, bool synchronousCall, Completer<Image> completer) {
-    completer.complete(imageInfo.image);
-  }
-
-  Future<void> loadImage() async {
-    status = TileStatus.fetching;
-    final c = Completer<Image>();
-    final oldImageStream = _imageStream;
-    _imageStream = imageProvider.resolve(const ImageConfiguration());
-    if (_imageStream!.key != oldImageStream?.key) {
-      if (_listener != null) oldImageStream?.removeListener(_listener!);
-
-      _listener = ImageStreamListener((info, s) => _tileOnLoad(info, s, c),
-          onError: (exception, stackTrace) {
-        if (!c.isCompleted) c.completeError(exception, stackTrace);
-      });
-      _imageStream!.addListener(_listener!);
-      try {
-        image = await c.future;
-        status = TileStatus.ready;
-      } catch (e) {
-        status = TileStatus.error;
-      }
-    }
-  }
 }
 
 typedef TileCallback = void Function(Tile tile);
@@ -303,9 +99,10 @@ class FlutterEarthState extends State<FlutterEarth>
 
   int get zoomLevel => zoom.round().clamp(minZoom, maxZoom);
 
-  LatLon get position => quaternionToLatLon(quaternion);
+  LatLon get position => LatLonConverter.quaternionToLatLon(quaternion);
 
-  EulerAngles get eulerAngles => quaternionToEulerAngles(quaternion);
+  EulerAngles get eulerAngles =>
+      MathWorthShit.quaternionToEulerAngles(quaternion);
 
   Quaternion quaternion = Quaternion.identity();
   late AnimationController animController;
@@ -335,7 +132,7 @@ class FlutterEarthState extends State<FlutterEarth>
     final q = Quaternion(-0.5, -0.5, 0.5, 0.5) * quaternion;
     q.inverted().rotate(v);
     v.normalize();
-    return vector3ToLatLon(v);
+    return LatLonConverter.vector3ToLatLon(v);
   }
 
   void clearCache() async {
@@ -405,7 +202,9 @@ class FlutterEarthState extends State<FlutterEarth>
       for (var x = clipRect.left; x < clipRect.right; x += 10.0) {
         final v = canvasPointToVector3(Offset(x, y));
         final latLon = canvasVector3ToLatLon(v);
-        final point = latLonToPoint(latLon.latitude, latLon.longitude) * scale;
+        final point =
+            LatLonConverter.latLonToPoint(latLon.latitude, latLon.longitude) *
+                scale;
         if (point.dx >= scale || point.dy >= scale) continue;
         final key = (point.dx.toInt() << 32) + point.dy.toInt();
         if ((i == 0 || lastKeys[i - 1] != key) &&
@@ -432,17 +231,18 @@ class FlutterEarthState extends State<FlutterEarth>
           tile?.status == TileStatus.ready) {
         //Is zoomed tile?
         if (layerTile?.z != zoomLevel && layerTile != null) {
-          final Float32List texcoords = mesh.texcoords;
-          final int texcoordCount = texcoords.length;
+          final Float32List textureCoordinates = mesh.textureCoordinates;
+          final int texcoordCount = textureCoordinates.length;
           final double scale = math.pow(2, layerTile.z - zoomLevel).toDouble();
           for (int i = 0; i < texcoordCount; i += 2) {
-            texcoords[i] =
-                (mesh.x + texcoords[i]) * scale - layerTile.x * tileWidth;
-            texcoords[i + 1] =
-                (mesh.y + texcoords[i + 1]) * scale - layerTile.y * tileHeight;
+            textureCoordinates[i] = (mesh.x + textureCoordinates[i]) * scale -
+                layerTile.x * tileWidth;
+            textureCoordinates[i + 1] =
+                (mesh.y + textureCoordinates[i + 1]) * scale -
+                    layerTile.y * tileHeight;
           }
         }
-        mesh.texture = await imageBuilder(layerTile!.image!, tile!.image!);
+        mesh.texture = layerTile?.image;
       }
     } else {
       final tile =
@@ -450,13 +250,15 @@ class FlutterEarthState extends State<FlutterEarth>
       if (tile?.status == TileStatus.ready) {
         //Is zoomed tile?
         if (tile?.z != zoomLevel && tile != null) {
-          final Float32List texcoords = mesh.texcoords;
-          final int texcoordCount = texcoords.length;
+          final Float32List textureCoordinates = mesh.textureCoordinates;
+          final int texcoordCount = textureCoordinates.length;
           final double scale = math.pow(2, tile.z - zoomLevel).toDouble();
           for (int i = 0; i < texcoordCount; i += 2) {
-            texcoords[i] = (mesh.x + texcoords[i]) * scale - tile.x * tileWidth;
-            texcoords[i + 1] =
-                (mesh.y + texcoords[i + 1]) * scale - tile.y * tileHeight;
+            textureCoordinates[i] =
+                (mesh.x + textureCoordinates[i]) * scale - tile.x * tileWidth;
+            textureCoordinates[i + 1] =
+                (mesh.y + textureCoordinates[i + 1]) * scale -
+                    tile.y * tileHeight;
           }
         }
         mesh.texture = tile?.image;
@@ -530,7 +332,7 @@ class FlutterEarthState extends State<FlutterEarth>
     final int vertexCount = (subdivisions + 1) * (subdivisionsX + 1);
     final int faceCount = subdivisions * subdivisionsX * 2;
     final Mesh mesh = Mesh(vertexCount, faceCount);
-    final Float32List texcoords = mesh.texcoords;
+    final Float32List textureCoordinates = mesh.textureCoordinates;
     final Float32List positions = mesh.positions;
     final Float32List positionsZ = mesh.positionsZ;
     int vertexIndex = 0;
@@ -543,7 +345,8 @@ class FlutterEarthState extends State<FlutterEarth>
       final double y0 = startLatitude + stepOfLat * j;
       for (int i = 0; i <= subdivisionsX; i++) {
         final double x0 = -math.pi + i * stepOfLon;
-        final v = latLonToVector3(LatLon(y0, x0))..scale(radius);
+        final v = LatLonConverter.latLonToVector3(LatLon(y0, x0))
+          ..scale(radius);
         v.applyMatrix3(matrix);
         // q.rotate(v);
         final Float64List storage4 = v.storage;
@@ -553,8 +356,8 @@ class FlutterEarthState extends State<FlutterEarth>
         vertexIndex += 2;
         vertexZIndex++;
 
-        texcoords[texcoordIndex] = imageWidth * i / subdivisionsX;
-        texcoords[texcoordIndex + 1] = imageHeight * j / subdivisions;
+        textureCoordinates[texcoordIndex] = imageWidth * i / subdivisionsX;
+        textureCoordinates[texcoordIndex + 1] = imageHeight * j / subdivisions;
         texcoordIndex += 2;
       }
     }
@@ -582,7 +385,7 @@ class FlutterEarthState extends State<FlutterEarth>
     final int vertexCount = (subdivisions + 1) * (subdivisions + 1);
     final int faceCount = subdivisions * subdivisions * 2;
     final Mesh mesh = Mesh(vertexCount, faceCount);
-    final Float32List texcoords = mesh.texcoords;
+    final Float32List textureCoordinates = mesh.textureCoordinates;
     final Float32List positions = mesh.positions;
     final Float32List positionsZ = mesh.positionsZ;
     int vertexIndex = 0;
@@ -593,8 +396,8 @@ class FlutterEarthState extends State<FlutterEarth>
       final y0 = (offsetY + tileHeight * j / subdivisions) / mapHeight;
       for (var i = 0; i <= subdivisions; i++) {
         final x0 = (offsetX + tileWidth * i / subdivisions) / mapWidth;
-        final latLon = pointToLatLon(x0, y0);
-        final v = latLonToVector3(latLon)..scale(radius);
+        final latLon = LatLonConverter.pointToLatLon(x0, y0);
+        final v = LatLonConverter.latLonToVector3(latLon)..scale(radius);
         v.applyMatrix3(matrix);
         // q.rotate(v);
         final Float64List storage4 = v.storage;
@@ -604,8 +407,8 @@ class FlutterEarthState extends State<FlutterEarth>
         vertexIndex += 2;
         vertexZIndex++;
 
-        texcoords[texcoordIndex] = tileWidth * i / subdivisions;
-        texcoords[texcoordIndex + 1] = tileHeight * j / subdivisions;
+        textureCoordinates[texcoordIndex] = tileWidth * i / subdivisions;
+        textureCoordinates[texcoordIndex + 1] = tileHeight * j / subdivisions;
         texcoordIndex += 2;
       }
     }
@@ -652,7 +455,7 @@ class FlutterEarthState extends State<FlutterEarth>
       final vertices = Vertices.raw(
         VertexMode.triangles,
         mesh.positions,
-        textureCoordinates: mesh.texcoords,
+        textureCoordinates: mesh.textureCoordinates,
         indices: mesh.indices,
       );
 
@@ -691,9 +494,9 @@ class FlutterEarthState extends State<FlutterEarth>
     final Vector3 oldCoord = canvasPointToVector3(_lastFocalPoint);
     final Vector3 newCoord = canvasPointToVector3(details.localFocalPoint);
     //var q = Quaternion.fromTwoVectors(newCoord, oldCoord); // It seems some issues with this 'fromTwoVectors' function.
-    Quaternion q = quaternionFromTwoVectors(newCoord, oldCoord);
+    Quaternion q = MathWorthShit.quaternionFromTwoVectors(newCoord, oldCoord);
     // final axis = q.axis; // It seems some issues with this 'axis' function.
-    final axis = quaternionAxis(q);
+    final axis = MathWorthShit.quaternionAxis(q);
     if (axis.x != 0 && axis.y != 0 && axis.z != 0) _lastRotationAxis = axis;
 
     q *= Quaternion.axisAngle(Vector3(0, 0, 1.0), -details.rotation);
@@ -750,8 +553,8 @@ class FlutterEarthState extends State<FlutterEarth>
     final Vector3 oldCoord = canvasPointToVector3(center);
     final Vector3 newCoord = canvasPointToVector3(
         center + details.velocity.pixelsPerSecond / distance);
-    Quaternion q = quaternionFromTwoVectors(newCoord, oldCoord);
-    final Vector3 axis = quaternionAxis(q);
+    Quaternion q = MathWorthShit.quaternionFromTwoVectors(newCoord, oldCoord);
+    final Vector3 axis = MathWorthShit.quaternionAxis(q);
     if (axis.x != 0 && axis.y != 0 && axis.z != 0) _lastRotationAxis = axis;
 
     animController.duration = Duration(milliseconds: duration.toInt());
@@ -798,17 +601,17 @@ class FlutterEarthState extends State<FlutterEarth>
 
     double panRadians = 0;
     if (newLatLon != null) {
-      final oldEuler = quaternionToEulerAngles(quaternion);
-      final newEuler = latLonToEulerAngles(newLatLon);
+      final oldEuler = MathWorthShit.quaternionToEulerAngles(quaternion);
+      final newEuler = MathWorthShit.latLonToEulerAngles(newLatLon);
       //Prevent the rotation over 180 degrees.
       if ((oldEuler.yaw - newEuler.yaw).abs() > math.pi) {
         newEuler.yaw -= math.pi * 2.0;
       }
       // q2 = q0 * q1 then q1 = q0.inverted * q2, and q0 = q2 * q1.inverted
-      final q0 = eulerAnglesToQuaternion(oldEuler);
-      final q2 = eulerAnglesToQuaternion(newEuler);
+      final q0 = MathWorthShit.eulerAnglesToQuaternion(oldEuler);
+      final q2 = MathWorthShit.eulerAnglesToQuaternion(newEuler);
       final q1 = q0.inverted() * q2;
-      _lastRotationAxis = quaternionAxis(q1); //q1.axis;
+      _lastRotationAxis = MathWorthShit.quaternionAxis(q1); //q1.axis;
       _lastQuaternion = q0;
       panRadians = q1.radians;
       panTime = Duration.millisecondsPerSecond *
@@ -921,76 +724,4 @@ class FlutterEarthState extends State<FlutterEarth>
       },
     );
   }
-}
-
-class SpherePainter extends CustomPainter {
-  const SpherePainter(this.state);
-
-  final FlutterEarthState state;
-
-  @override
-  void paint(Canvas canvas, Size size) async {
-    canvas.translate(size.width / 2, size.height / 2);
-    state.drawTiles(canvas, size);
-  }
-
-  // We should repaint whenever the board changes, such as board.selected.
-  @override
-  bool shouldRepaint(SpherePainter oldDelegate) {
-    return true;
-  }
-}
-
-class FlutterEarthController {
-  FlutterEarthController(this._state);
-
-  final FlutterEarthState _state;
-
-  Quaternion get quaternion => _state.quaternion;
-
-  EulerAngles get eulerAngles => _state.eulerAngles;
-
-  LatLon get position => _state.position;
-
-  double get zoom => _state.zoom;
-
-  bool get isAnimating => _state.animController.isAnimating;
-
-  void clearCache() => _state.clearCache();
-
-  void animateCamera(
-      {LatLon? newLatLon,
-      double? riseZoom,
-      double? fallZoom,
-      double panSpeed = 10.0,
-      double riseSpeed = 1.0,
-      double fallSpeed = 1.0}) {
-    _state.animateCamera(
-        newLatLon: newLatLon,
-        riseZoom: riseZoom,
-        fallZoom: fallZoom,
-        panSpeed: panSpeed,
-        riseSpeed: riseSpeed,
-        fallSpeed: fallSpeed);
-  }
-}
-
-Future<Image> imageBuilder(Image imageA, Image imageB) async {
-  final imageBytesA = await imageA.toByteData();
-  final imageBytesB = await imageB.toByteData();
-  Uint8List valuesA = imageBytesA!.buffer.asUint8List();
-  img.Image? photoA;
-  Uint8List valuesB = imageBytesB!.buffer.asUint8List();
-  img.Image? photoB;
-  photoA = img.decodeImage(valuesA)!;
-  photoB = img.decodeImage(valuesB)!;
-
-  for (int y = 0; y < photoA.height; ++y) {
-    for (int x = 0; x < photoA.width; ++x) {
-      if (photoA.getPixel(x, y).a != 255) {
-        photoA.data!.setPixel(x, y, photoB.getPixel(x, y));
-      }
-    }
-  }
-  return photoA as Image;
 }
