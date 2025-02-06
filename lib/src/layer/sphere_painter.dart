@@ -7,7 +7,7 @@ class SpherePainter extends CustomPainter {
   final FlutterEarthState state;
 
   @override
-  void paint(Canvas canvas, Size size) async {
+  void paint(Canvas canvas, Size size) {
     canvas.translate(size.width / 2, size.height / 2);
     state.drawTiles(canvas, size);
   }

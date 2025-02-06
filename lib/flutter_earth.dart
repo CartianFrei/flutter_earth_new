@@ -214,7 +214,7 @@ class FlutterEarthState extends State<FlutterEarth>
     return list;
   }
 
-  void initMeshTexture(Mesh mesh, String url, String? layerUrl) async {
+  void initMeshTexture(Mesh mesh, String url, String? layerUrl) {
     if (layerUrl != null) {
       final layerTile = getTile(
           mesh.x ~/ tileWidth, mesh.y ~/ tileHeight, zoomLevel, layerUrl);
@@ -412,7 +412,7 @@ class FlutterEarthState extends State<FlutterEarth>
     return initMeshFaces(mesh, subdivisions, subdivisions);
   }
 
-  void drawTiles(Canvas canvas, Size size) async {
+  void drawTiles(Canvas canvas, Size size) {
     final tiles = clipTiles(Rect.fromLTWH(0, 0, width, height), radius);
     final meshList = <Mesh>[];
     final maxWidth = tileWidth * (1 << zoomLevel);
