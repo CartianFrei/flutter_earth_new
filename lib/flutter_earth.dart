@@ -194,7 +194,7 @@ class FlutterEarthState extends State<FlutterEarth>
       var i = 0;
       for (var x = clipRect.left; x < clipRect.right; x += 10.0) {
         final v = canvasPointToVector3(Offset(x, y));
-        final latLon = LatLonConverter.canvasVector3ToLatLon(v);
+        final latLon = LatLonConverter.canvasVector3ToLatLon(v, quaternion);
         final point =
             LatLonConverter.latLonToPoint(latLon.latitude, latLon.longitude) *
                 scale;

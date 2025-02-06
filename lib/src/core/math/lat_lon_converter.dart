@@ -55,8 +55,8 @@ class LatLonConverter {
     return MathWorthShit.eulerAnglesToQuaternion(euler);
   }
 
-  static LatLon canvasVector3ToLatLon(Vector3 v) {
-    final q = Quaternion(-0.5, -0.5, 0.5, 0.5) * Quaternion.identity();
+  static LatLon canvasVector3ToLatLon(Vector3 v, Quaternion quaternion) {
+    final q = Quaternion(-0.5, -0.5, 0.5, 0.5) * quaternion;
     q.inverted().rotate(v);
     v.normalize();
     return LatLonConverter.vector3ToLatLon(v);
