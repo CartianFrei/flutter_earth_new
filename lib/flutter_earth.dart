@@ -592,7 +592,8 @@ class FlutterEarthState extends State<FlutterEarth>
     return initMeshFaces(mesh, subdivisions, subdivisions);
   }
 
-  void drawTiles(Canvas canvas, Size size, String url) {
+  void drawTiles(
+      Canvas canvas, Size size, String coverage, List<String>? layers) {
     final tiles = clipTiles(Rect.fromLTWH(0, 0, width, height), radius);
     final meshList = <Mesh>[];
     final maxWidth = tileWidth * (1 << zoomLevel);
@@ -612,7 +613,8 @@ class FlutterEarthState extends State<FlutterEarth>
         maxHeight,
         radius,
       );
-      initMeshTexture(mesh, url);
+      initMeshTexture(mesh, coverage);
+      layers?.map((e) => initMeshTexture(mesh, e));
       meshList.add(mesh);
     }
     if (widget.showPole ?? false) {
@@ -890,17 +892,9 @@ class FlutterEarthState extends State<FlutterEarth>
           onScaleUpdate: _handleScaleUpdate,
           onScaleEnd: _handleScaleEnd,
           onDoubleTap: _handleDoubleTap,
-          child: Stack(
-            children: [
-              CustomPaint(
-                painter: SpherePainterCoverage(this, widget.coverage),
-                size: Size(constraints.maxWidth, constraints.maxHeight),
-              ),
-              CustomPaint(
-                painter: SpherePainterLayers(this, widget.layers),
-                size: Size(constraints.maxWidth, constraints.maxHeight),
-              ),
-            ],
+          child: CustomPaint(
+            painter: SpherePainter(this, widget.coverage, widget.layers),
+            size: Size(constraints.maxWidth, constraints.maxHeight),
           ),
         );
       },
@@ -908,40 +902,22 @@ class FlutterEarthState extends State<FlutterEarth>
   }
 }
 
-class SpherePainterCoverage extends CustomPainter {
-  const SpherePainterCoverage(this.state, this.coverage);
+class SpherePainter extends CustomPainter {
+  const SpherePainter(this.state, this.coverage, this.layers);
 
   final FlutterEarthState state;
   final String coverage;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.translate(size.width / 2, size.height / 2);
-    state.drawTiles(canvas, size, coverage);
-  }
-
-  // We should repaint whenever the board changes, such as board.selected.
-  @override
-  bool shouldRepaint(SpherePainterCoverage oldDelegate) {
-    return true;
-  }
-}
-
-class SpherePainterLayers extends CustomPainter {
-  const SpherePainterLayers(this.state, this.layers);
-
-  final FlutterEarthState state;
   final List<String>? layers;
 
   @override
   void paint(Canvas canvas, Size size) {
     canvas.translate(size.width / 2, size.height / 2);
-    layers?.map((e) => state.drawTiles(canvas, size, e));
+    state.drawTiles(canvas, size, coverage, layers);
   }
 
   // We should repaint whenever the board changes, such as board.selected.
   @override
-  bool shouldRepaint(SpherePainterLayers oldDelegate) {
+  bool shouldRepaint(SpherePainter oldDelegate) {
     return true;
   }
 }
