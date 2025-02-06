@@ -55,16 +55,6 @@ class LatLonConverter {
     return MathWorthShit.eulerAnglesToQuaternion(euler);
   }
 
-  static Vector3 canvasPointToVector3(
-      Offset point, double width, double height, double radius) {
-    final x = point.dx - width / 2;
-    final y = point.dy - height / 2;
-    var z = radius * radius - x * x - y * y;
-    if (z < 0) z = 0;
-    z = -math.sqrt(z);
-    return Vector3(x, y, z);
-  }
-
   static LatLon canvasVector3ToLatLon(Vector3 v) {
     final q = Quaternion(-0.5, -0.5, 0.5, 0.5) * Quaternion.identity();
     q.inverted().rotate(v);

@@ -104,6 +104,15 @@ class FlutterEarthState extends State<FlutterEarth>
   EulerAngles get eulerAngles =>
       MathWorthShit.quaternionToEulerAngles(quaternion);
 
+  Vector3 canvasPointToVector3(Offset point) {
+    final x = point.dx - width / 2;
+    final y = point.dy - height / 2;
+    var z = radius * radius - x * x - y * y;
+    if (z < 0) z = 0;
+    z = -math.sqrt(z);
+    return Vector3(x, y, z);
+  }
+
   Quaternion quaternion = Quaternion.identity();
   late AnimationController animController;
   Animation<double>? panAnimation;
@@ -184,8 +193,7 @@ class FlutterEarthState extends State<FlutterEarth>
     for (var y = clipRect.top; y < clipRect.bottom; y += 10.0) {
       var i = 0;
       for (var x = clipRect.left; x < clipRect.right; x += 10.0) {
-        final v = LatLonConverter.canvasPointToVector3(
-            Offset(x, y), width, height, radius);
+        final v = canvasPointToVector3(Offset(x, y));
         final latLon = LatLonConverter.canvasVector3ToLatLon(v);
         final point =
             LatLonConverter.latLonToPoint(latLon.latitude, latLon.longitude) *
@@ -477,10 +485,9 @@ class FlutterEarthState extends State<FlutterEarth>
       zoom = _lastZoom! + math.log(details.scale) / math.ln2;
     }
 
-    final Vector3 oldCoordinates = LatLonConverter.canvasPointToVector3(
-        _lastFocalPoint, width, height, radius);
-    final Vector3 newCoordinates = LatLonConverter.canvasPointToVector3(
-        details.localFocalPoint, width, height, radius);
+    final Vector3 oldCoordinates = canvasPointToVector3(_lastFocalPoint);
+    final Vector3 newCoordinates =
+        canvasPointToVector3(details.localFocalPoint);
     //var q = Quaternion.fromTwoVectors(newCoordinates, oldCoordinates); // It seems some issues with this 'fromTwoVectors' function.
     Quaternion q =
         MathWorthShit.quaternionFromTwoVectors(newCoordinates, oldCoordinates);
@@ -539,13 +546,9 @@ class FlutterEarthState extends State<FlutterEarth>
 
     double radians = 1000 * distance / radius;
     final Offset center = Offset(width / 2, height / 2);
-    final Vector3 oldCoordinates =
-        LatLonConverter.canvasPointToVector3(center, width, height, radius);
-    final Vector3 newCoordinates = LatLonConverter.canvasPointToVector3(
-        center + details.velocity.pixelsPerSecond / distance,
-        width,
-        height,
-        radius);
+    final Vector3 oldCoordinates = canvasPointToVector3(center);
+    final Vector3 newCoordinates = canvasPointToVector3(
+        center + details.velocity.pixelsPerSecond / distance);
     Quaternion q =
         MathWorthShit.quaternionFromTwoVectors(newCoordinates, oldCoordinates);
     final Vector3 axis = MathWorthShit.quaternionAxis(q);
