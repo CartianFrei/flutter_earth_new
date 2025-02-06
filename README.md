@@ -9,7 +9,7 @@ Add flutter_earth as a dependency in your pubspec.yaml file.
 
 ```yaml
 dependencies:
-  flutter_earth: ^0.0.4
+  flutter_earth: ^1.0.0
 ```
 
 ```dart
