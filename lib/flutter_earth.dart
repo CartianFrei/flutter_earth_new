@@ -615,10 +615,13 @@ class FlutterEarthState extends State<FlutterEarth>
       );
       initMeshTexture(mesh, coverage);
       meshList.add(mesh);
-      layers?.map((e) {
-        initMeshTexture(mesh, e);
-        meshList.add(mesh);
-      });
+      if (layers != null && layers.isNotEmpty) {
+        layers.map((e) {
+          initMeshTexture(mesh, e);
+          meshList
+              .map((item) => item.positions == mesh.positions ? mesh : item);
+        });
+      }
     }
     if (widget.showPole ?? false) {
       meshList.add(buildPoleMesh(math.pi / 2, radians(84), 5, northPoleImage));
