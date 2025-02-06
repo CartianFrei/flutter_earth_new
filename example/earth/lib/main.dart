@@ -7,7 +7,8 @@ import 'package:flutter/services.dart' show rootBundle;
 void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -19,21 +20,21 @@ class MyApp extends StatelessWidget {
 }
 
 class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
+  const MyHomePage({super.key, this.title});
 
-  final String title;
+  final String? title;
 
   @override
-  _MyHomePageState createState() => _MyHomePageState();
+  State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  FlutterEarthController _controller;
+  late FlutterEarthController _controller;
   double _zoom = 0;
   LatLon _position = LatLon(0, 0);
   String _cityName = '';
   dynamic _cityList;
-  Random _random = Random();
+  final Random _random = Random();
 
   void _onMapCreated(FlutterEarthController controller) {
     _controller = controller;
@@ -103,7 +104,7 @@ class _MyHomePageState extends State<MyHomePage> {
         onPressed: _moveToNextCity,
         tooltip: 'Increment',
         mini: true,
-        child: Icon(Icons.location_searching),
+        child: const Icon(Icons.location_searching),
       ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
