@@ -53,8 +53,7 @@ typedef CameraPositionCallback = void Function(LatLon latLon, double zoom);
 class FlutterEarth extends StatefulWidget {
   const FlutterEarth(
       {super.key,
-      required this.coverage,
-      this.layer,
+      required this.layers,
       this.radius,
       this.maxVertexCount = 5000,
       this.showPole = true,
@@ -64,8 +63,7 @@ class FlutterEarth extends StatefulWidget {
       this.onTileEnd,
       this.imageProvider});
 
-  final String coverage;
-  final String? layer;
+  final List<String> layers;
   final double? radius;
   final int maxVertexCount;
   final bool? showPole;
@@ -214,45 +212,24 @@ class FlutterEarthState extends State<FlutterEarth>
     return list;
   }
 
-  void initMeshTexture(Mesh mesh, String url, String? layerUrl) {
-    if (layerUrl != null) {
-      final layerTile = getTile(
-          mesh.x ~/ tileWidth, mesh.y ~/ tileHeight, zoomLevel, layerUrl);
-      if (layerTile?.status == TileStatus.ready) {
-        //Is zoomed tile?
-        if (layerTile?.z != zoomLevel && layerTile != null) {
-          final Float32List textureCoordinates = mesh.textureCoordinates;
-          final int textureCoordinatesCount = textureCoordinates.length;
-          final double scale = math.pow(2, layerTile.z - zoomLevel).toDouble();
-          for (int i = 0; i < textureCoordinatesCount; i += 2) {
-            textureCoordinates[i] = (mesh.x + textureCoordinates[i]) * scale -
-                layerTile.x * tileWidth;
-            textureCoordinates[i + 1] =
-                (mesh.y + textureCoordinates[i + 1]) * scale -
-                    layerTile.y * tileHeight;
-          }
+  void initMeshTexture(Mesh mesh, String url) {
+    final tile =
+        getTile(mesh.x ~/ tileWidth, mesh.y ~/ tileHeight, zoomLevel, url);
+    if (tile?.status == TileStatus.ready) {
+      //Is zoomed tile?
+      if (tile?.z != zoomLevel && tile != null) {
+        final Float32List textureCoordinates = mesh.textureCoordinates;
+        final int textureCoordinatesCount = textureCoordinates.length;
+        final double scale = math.pow(2, tile.z - zoomLevel).toDouble();
+        for (int i = 0; i < textureCoordinatesCount; i += 2) {
+          textureCoordinates[i] =
+              (mesh.x + textureCoordinates[i]) * scale - tile.x * tileWidth;
+          textureCoordinates[i + 1] =
+              (mesh.y + textureCoordinates[i + 1]) * scale -
+                  tile.y * tileHeight;
         }
-        mesh.texture = layerTile?.image;
       }
-    } else {
-      final tile =
-          getTile(mesh.x ~/ tileWidth, mesh.y ~/ tileHeight, zoomLevel, url);
-      if (tile?.status == TileStatus.ready) {
-        //Is zoomed tile?
-        if (tile?.z != zoomLevel && tile != null) {
-          final Float32List textureCoordinates = mesh.textureCoordinates;
-          final int textureCoordinatesCount = textureCoordinates.length;
-          final double scale = math.pow(2, tile.z - zoomLevel).toDouble();
-          for (int i = 0; i < textureCoordinatesCount; i += 2) {
-            textureCoordinates[i] =
-                (mesh.x + textureCoordinates[i]) * scale - tile.x * tileWidth;
-            textureCoordinates[i + 1] =
-                (mesh.y + textureCoordinates[i + 1]) * scale -
-                    tile.y * tileHeight;
-          }
-        }
-        mesh.texture = tile?.image;
-      }
+      mesh.texture = tile?.image;
     }
   }
 
@@ -412,7 +389,7 @@ class FlutterEarthState extends State<FlutterEarth>
     return initMeshFaces(mesh, subdivisions, subdivisions);
   }
 
-  void drawTiles(Canvas canvas, Size size) {
+  void drawTiles(Canvas canvas, Size size, String url) {
     final tiles = clipTiles(Rect.fromLTWH(0, 0, width, height), radius);
     final meshList = <Mesh>[];
     final maxWidth = tileWidth * (1 << zoomLevel);
@@ -432,7 +409,7 @@ class FlutterEarthState extends State<FlutterEarth>
         maxHeight,
         radius,
       );
-      initMeshTexture(mesh, widget.coverage, widget.layer);
+      initMeshTexture(mesh, url);
       meshList.add(mesh);
     }
     if (widget.showPole ?? false) {
@@ -713,9 +690,14 @@ class FlutterEarthState extends State<FlutterEarth>
           onScaleUpdate: _handleScaleUpdate,
           onScaleEnd: _handleScaleEnd,
           onDoubleTap: _handleDoubleTap,
-          child: CustomPaint(
-            painter: SpherePainter(this),
-            size: Size(constraints.maxWidth, constraints.maxHeight),
+          child: Stack(
+            children: List<Widget>.generate(
+              widget.layers.length,
+              (int index) => CustomPaint(
+                painter: SpherePainter(this, widget.layers[index]),
+                size: Size(constraints.maxWidth, constraints.maxHeight),
+              ),
+            ),
           ),
         );
       },

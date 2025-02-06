@@ -84,8 +84,9 @@ class _MyHomePageState extends State<MyHomePage> {
               children: <Widget>[
                 Expanded(
                   child: FlutterEarth(
-                    coverage:
-                        'http://mt0.google.cn/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}',
+                    layers: [
+                      'http://mt0.google.cn/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}'
+                    ],
                     radius: 180,
                     onMapCreated: _onMapCreated,
                     onCameraMove: _onCameraMove,
