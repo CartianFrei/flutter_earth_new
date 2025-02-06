@@ -426,6 +426,8 @@ class FlutterEarthState extends State<FlutterEarth>
     if (layerUrl != null) {
       final layerTile = getTile(
           mesh.x ~/ tileWidth, mesh.y ~/ tileHeight, zoomLevel, layerUrl);
+      final tile =
+          getTile(mesh.x ~/ tileWidth, mesh.y ~/ tileHeight, zoomLevel, url);
       if (layerTile?.status == TileStatus.ready) {
         //Is zoomed tile?
         if (layerTile?.z != zoomLevel && layerTile != null) {
@@ -440,6 +442,22 @@ class FlutterEarthState extends State<FlutterEarth>
           }
         }
         mesh.texture = layerTile?.image;
+      } else {
+        if (tile?.status == TileStatus.ready) {
+          //Is zoomed tile?
+          if (tile?.z != zoomLevel && tile != null) {
+            final Float32List texcoords = mesh.texcoords;
+            final int texcoordCount = texcoords.length;
+            final double scale = math.pow(2, tile.z - zoomLevel).toDouble();
+            for (int i = 0; i < texcoordCount; i += 2) {
+              texcoords[i] =
+                  (mesh.x + texcoords[i]) * scale - tile.x * tileWidth;
+              texcoords[i + 1] =
+                  (mesh.y + texcoords[i + 1]) * scale - tile.y * tileHeight;
+            }
+          }
+          mesh.texture = tile?.image;
+        }
       }
     } else {
       final tile =
