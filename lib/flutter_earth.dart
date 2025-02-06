@@ -210,10 +210,7 @@ class FlutterEarthState extends State<FlutterEarth>
     if (layerUrl != null) {
       final layerTile = getTile(
           mesh.x ~/ tileWidth, mesh.y ~/ tileHeight, zoomLevel, layerUrl);
-      final tile =
-          getTile(mesh.x ~/ tileWidth, mesh.y ~/ tileHeight, zoomLevel, url);
-      if (layerTile?.status == TileStatus.ready &&
-          tile?.status == TileStatus.ready) {
+      if (layerTile?.status == TileStatus.ready) {
         //Is zoomed tile?
         if (layerTile?.z != zoomLevel && layerTile != null) {
           final Float32List textureCoordinates = mesh.textureCoordinates;
