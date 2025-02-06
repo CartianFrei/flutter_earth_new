@@ -696,6 +696,7 @@ class FlutterEarthState extends State<FlutterEarth>
               (int index) => CustomPaint(
                 painter: SpherePainter(this, widget.layers[index]),
                 size: Size(constraints.maxWidth, constraints.maxHeight),
+                child: Container(),
               ),
             ),
           ),
