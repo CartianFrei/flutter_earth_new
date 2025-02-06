@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:flutter_earth/src/core/resources/euler_angles.dart';
-import 'package:flutter_earth/src/core/resources/lat_lon.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 class MathWorthShit {
@@ -46,13 +45,5 @@ class MathWorthShit {
 
   static Quaternion eulerAnglesToQuaternion(EulerAngles euler) {
     return Quaternion.euler(euler.yaw, euler.pitch, euler.roll);
-  }
-
-  static LatLon eulerAnglesToLatLon(EulerAngles euler) {
-    return LatLon(-euler.pitch, -euler.yaw);
-  }
-
-  static EulerAngles latLonToEulerAngles(LatLon latLon) {
-    return EulerAngles(-latLon.longitude, -latLon.latitude, 0);
   }
 }

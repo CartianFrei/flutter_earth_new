@@ -1,7 +1,8 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
-import 'package:flutter_earth/src/core/math/math_worths_sh.dart';
+import 'package:flutter_earth/src/core/math/math_worth_sh.dart';
+import 'package:flutter_earth/src/core/resources/euler_angles.dart';
 import 'package:flutter_earth/src/core/resources/lat_lon.dart';
 import 'package:vector_math/vector_math_64.dart';
 
@@ -46,11 +47,36 @@ class LatLonConverter {
   /// Quaternion conversions
   static LatLon quaternionToLatLon(Quaternion q) {
     final euler = MathWorthShit.quaternionToEulerAngles(q);
-    return MathWorthShit.eulerAnglesToLatLon(euler);
+    return LatLonConverter.eulerAnglesToLatLon(euler);
   }
 
   static Quaternion latLonToQuaternion(LatLon latLon) {
-    final euler = MathWorthShit.latLonToEulerAngles(latLon);
+    final euler = LatLonConverter.latLonToEulerAngles(latLon);
     return MathWorthShit.eulerAnglesToQuaternion(euler);
+  }
+
+  static Vector3 canvasPointToVector3(
+      Offset point, double width, double height, double radius) {
+    final x = point.dx - width / 2;
+    final y = point.dy - height / 2;
+    var z = radius * radius - x * x - y * y;
+    if (z < 0) z = 0;
+    z = -math.sqrt(z);
+    return Vector3(x, y, z);
+  }
+
+  static LatLon canvasVector3ToLatLon(Vector3 v) {
+    final q = Quaternion(-0.5, -0.5, 0.5, 0.5) * Quaternion.identity();
+    q.inverted().rotate(v);
+    v.normalize();
+    return LatLonConverter.vector3ToLatLon(v);
+  }
+
+  static LatLon eulerAnglesToLatLon(EulerAngles euler) {
+    return LatLon(-euler.pitch, -euler.yaw);
+  }
+
+  static EulerAngles latLonToEulerAngles(LatLon latLon) {
+    return EulerAngles(-latLon.longitude, -latLon.latitude, 0);
   }
 }
