@@ -256,7 +256,8 @@ typedef CameraPositionCallback = void Function(LatLon latLon, double zoom);
 class FlutterEarth extends StatefulWidget {
   const FlutterEarth(
       {super.key,
-      required this.url,
+      required this.coverage,
+      this.layers,
       this.radius,
       this.maxVertexCount = 5000,
       this.showPole = true,
@@ -266,7 +267,8 @@ class FlutterEarth extends StatefulWidget {
       this.onTileEnd,
       this.imageProvider});
 
-  final String url;
+  final String coverage;
+  final List<String>? layers;
   final double? radius;
   final int maxVertexCount;
   final bool? showPole;
@@ -363,18 +365,18 @@ class FlutterEarthState extends State<FlutterEarth>
     return tile;
   }
 
-  Tile? getTile(int x, int y, int z) {
+  Tile? getTile(int x, int y, int z, String url) {
     final key = (x << 32) + y;
     var tile = tiles[z][key];
     if (tile == null) {
-      final url = widget.url
+      final tileUrl = url
           .replaceAll('{z}', '$z')
           .replaceAll('{x}', '$x')
           .replaceAll('{y}', '$y');
       tile = Tile(x, y, z,
           imageProvider: widget.imageProvider != null
-              ? widget.imageProvider!(url)
-              : NetworkImage(url));
+              ? widget.imageProvider!(tileUrl)
+              : NetworkImage(tileUrl));
       tiles[z][key] = tile;
     }
     if (tile.status == TileStatus.clear || tile.status == TileStatus.error) {
@@ -420,8 +422,9 @@ class FlutterEarthState extends State<FlutterEarth>
     return list;
   }
 
-  void initMeshTexture(Mesh mesh) {
-    final tile = getTile(mesh.x ~/ tileWidth, mesh.y ~/ tileHeight, zoomLevel);
+  void initMeshTexture(Mesh mesh, String url) {
+    final tile =
+        getTile(mesh.x ~/ tileWidth, mesh.y ~/ tileHeight, zoomLevel, url);
     if (tile?.status == TileStatus.ready) {
       //Is zoomed tile?
       if (tile?.z != zoomLevel && tile != null) {
@@ -589,7 +592,7 @@ class FlutterEarthState extends State<FlutterEarth>
     return initMeshFaces(mesh, subdivisions, subdivisions);
   }
 
-  void drawTiles(Canvas canvas, Size size) {
+  void drawTiles(Canvas canvas, Size size, String url) {
     final tiles = clipTiles(Rect.fromLTWH(0, 0, width, height), radius);
     final meshList = <Mesh>[];
     final maxWidth = tileWidth * (1 << zoomLevel);
@@ -609,7 +612,7 @@ class FlutterEarthState extends State<FlutterEarth>
         maxHeight,
         radius,
       );
-      initMeshTexture(mesh);
+      initMeshTexture(mesh, url);
       meshList.add(mesh);
     }
     if (widget.showPole ?? false) {
@@ -888,7 +891,7 @@ class FlutterEarthState extends State<FlutterEarth>
           onScaleEnd: _handleScaleEnd,
           onDoubleTap: _handleDoubleTap,
           child: CustomPaint(
-            painter: SpherePainter(this),
+            painter: SpherePainter(this, widget.coverage, widget.layers),
             size: Size(constraints.maxWidth, constraints.maxHeight),
           ),
         );
@@ -898,14 +901,17 @@ class FlutterEarthState extends State<FlutterEarth>
 }
 
 class SpherePainter extends CustomPainter {
-  const SpherePainter(this.state);
+  const SpherePainter(this.state, this.coverage, this.layers);
 
   final FlutterEarthState state;
+  final String coverage;
+  final List<String>? layers;
 
   @override
   void paint(Canvas canvas, Size size) {
     canvas.translate(size.width / 2, size.height / 2);
-    state.drawTiles(canvas, size);
+    state.drawTiles(canvas, size, coverage);
+    layers?.map((e) => state.drawTiles(canvas, size, e));
   }
 
   // We should repaint whenever the board changes, such as board.selected.
